@@ -3,19 +3,21 @@
 int terminate;
 int t_compleated;
 sem_t* main_sem; //semafor sluzacy do zabezpieczenie sekcji krytycznej w pamieci wspoldzielonej
+pthread_mutex_t main_mutex = PTHREAD_MUTEX_INITIALIZER; //muteks ktory sluzy do zabezpieczania zmiennych terminate i t_compleated przed hazardem
 
 void *comunicate(void *arg)
 {
     struct data_t *pdata = (struct data_t*)arg;
 
+    pthread_mutex_lock(&main_mutex);
     while(!terminate) {
-
+        pthread_mutex_unlock(&main_mutex);
         sem_init(&pdata->sem_1,1,0);
         sem_init(&pdata->sem_2,1,0);
 
 
         sem_wait(&pdata->sem_1);
-        sem_wait(main_sem); //nie tu powinno byc
+        sem_wait(main_sem);
 
         printf("Client connected\n");
         printf("size = %d\n", pdata->size);
@@ -23,8 +25,6 @@ void *comunicate(void *arg)
         int wsk = shm_open("/msg_tab", O_CREAT | O_RDWR, 0600);
         ftruncate(wsk, sizeof(int32_t)*pdata->size);
         int32_t *tab = (int32_t*) mmap(NULL, sizeof(int32_t)*pdata->size, PROT_READ | PROT_WRITE, MAP_SHARED, wsk, 0);
-
-        t_compleated = 0;
 
         printf("Memory allocated\n");
 
@@ -36,6 +36,9 @@ void *comunicate(void *arg)
         sem_wait(main_sem);
         pdata->sum = 0;
 
+        pthread_mutex_lock(&main_mutex);
+        t_compleated = 0;
+        pthread_mutex_unlock(&main_mutex);
 
         //sleep(10);
 
@@ -59,15 +62,20 @@ void *comunicate(void *arg)
         sem_close(&pdata->sem_1);
         sem_close(&pdata->sem_2);
 
+        pthread_mutex_lock(&main_mutex);
         t_compleated = 1;
     }
+
+    pthread_mutex_unlock(&main_mutex);
 }
 
 int main()
 {
     pthread_t comunicate_t;
 
+    pthread_mutex_lock(&main_mutex);
     terminate = 0;
+    pthread_mutex_unlock(&main_mutex);
 
     int fd = shm_open("/msg_data", O_CREAT | O_RDWR, 0600);
     ftruncate(fd, sizeof(struct data_t));
@@ -95,7 +103,9 @@ int main()
 
     int flag = 0;
 
+    pthread_mutex_lock(&main_mutex);
     while(!(terminate && t_compleated)) {
+        pthread_mutex_unlock(&main_mutex);
         if(flag == 0) {
             char input[5];
 
@@ -114,9 +124,13 @@ int main()
 
     sem_close(main_sem);
 
+    sem_destroy(&pdata->sem_1);
+    sem_destroy(&pdata->sem_2);
+
     munmap(pdata, sizeof(struct data_t));
     close(fd);
 
+    pthread_mutex_destroy(&main_mutex);
     sem_unlink("main_sem");
 
     shm_unlink("/msg_tab");

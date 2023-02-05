@@ -20,7 +20,14 @@ int main(int num, char** arg) {
         return 4;
     }
 
-    sem_wait(main_sem);
+    int ch = sem_trywait(main_sem);
+    if(ch == -1 && errno == EAGAIN){
+        printf("Serwer pelny\n");
+        munmap(pdata, sizeof(struct data_t));
+        close(fd);
+
+        return 5;
+    }
 
     printf("Connected\n");
 
@@ -60,7 +67,6 @@ int main(int num, char** arg) {
     printf("Wynik sumowania = %d\n", pdata->sum);
     pdata->ammount += 1;
 
-    //sem_post(&pdata->sem_1);
     sem_post(&pdata->sem_2);
     sem_post(main_sem);
 

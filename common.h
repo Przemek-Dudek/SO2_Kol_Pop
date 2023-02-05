@@ -9,6 +9,7 @@
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
+#include <errno.h>
 
 struct data_t {
     sem_t sem_1;
