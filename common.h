@@ -17,8 +17,6 @@ struct data_t {
     int ammount;
     int32_t size;
     u_int64_t sum;
-
-    int t_compleated;
 };
 
 static void err(int num, const char* msg) {

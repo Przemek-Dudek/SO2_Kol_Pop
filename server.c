@@ -1,6 +1,7 @@
 #include "common.h"
 
 int terminate;
+int t_compleated;
 sem_t* main_sem; //semafor sluzacy do zabezpieczenie sekcji krytycznej w pamieci wspoldzielonej
 
 void *comunicate(void *arg)
@@ -23,12 +24,12 @@ void *comunicate(void *arg)
         ftruncate(wsk, sizeof(int32_t)*pdata->size);
         int32_t *tab = (int32_t*) mmap(NULL, sizeof(int32_t)*pdata->size, PROT_READ | PROT_WRITE, MAP_SHARED, wsk, 0);
 
-        pdata->t_compleated = 0;
+        t_compleated = 0;
 
         printf("Memory allocated\n");
-        sem_post(main_sem);
 
         sem_post(&pdata->sem_2);
+        sem_post(main_sem);
 
         sem_wait(&pdata->sem_1);
 
@@ -46,9 +47,8 @@ void *comunicate(void *arg)
 
         printf("Data sent to client\n\n");
 
-        sem_post(main_sem);
-
         sem_post(&pdata->sem_1);
+        sem_post(main_sem);
 
         sem_wait(&pdata->sem_2);
 
@@ -59,9 +59,7 @@ void *comunicate(void *arg)
         sem_close(&pdata->sem_1);
         sem_close(&pdata->sem_2);
 
-        sem_wait(main_sem);
-        pdata->t_compleated = 1;
-        sem_post(main_sem);
+        t_compleated = 1;
     }
 }
 
@@ -97,7 +95,7 @@ int main()
 
     int flag = 0;
 
-    while(!(terminate && pdata->t_compleated)) {
+    while(!(terminate && t_compleated)) {
         if(flag == 0) {
             char input[5];
 

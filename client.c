@@ -60,7 +60,7 @@ int main(int num, char** arg) {
     printf("Wynik sumowania = %d\n", pdata->sum);
     pdata->ammount += 1;
 
-    sem_post(&pdata->sem_1);
+    //sem_post(&pdata->sem_1);
     sem_post(&pdata->sem_2);
     sem_post(main_sem);
 
