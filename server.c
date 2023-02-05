@@ -11,10 +11,10 @@ void *comunicate(void *arg)
 
     pthread_mutex_lock(&main_mutex);
     while(!terminate) {
+        t_compleated = 1;
         pthread_mutex_unlock(&main_mutex);
         sem_init(&pdata->sem_1,1,0);
         sem_init(&pdata->sem_2,1,0);
-
 
         sem_wait(&pdata->sem_1);
         sem_wait(main_sem);
@@ -28,6 +28,10 @@ void *comunicate(void *arg)
 
         printf("Memory allocated\n");
 
+        pthread_mutex_lock(&main_mutex);
+        t_compleated = 0;
+        pthread_mutex_unlock(&main_mutex);
+
         sem_post(&pdata->sem_2);
         sem_post(main_sem);
 
@@ -35,10 +39,6 @@ void *comunicate(void *arg)
 
         sem_wait(main_sem);
         pdata->sum = 0;
-
-        pthread_mutex_lock(&main_mutex);
-        t_compleated = 0;
-        pthread_mutex_unlock(&main_mutex);
 
         //sleep(10);
 
